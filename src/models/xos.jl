@@ -1,6 +1,9 @@
 import Base.show
 using LinearAlgebra
 
+const MatrixType{T} = Union{AbstractMatrix{T1}, UniformScaling{T2}} where {T1<:Real, T2<:Real}
+const VectorType{T} = Union{AbstractVector{T1}, UniformScaling{T2}} where {T1<:Real, T2<:Real}
+
 """
     XOSModel(N, Mˢ, Mᵈ, Mᵉ, d)
 
@@ -8,14 +11,16 @@ Financial network of `N` firms with investment portfolios `Mˢ`, `Mᵈ`
 and `Mᵉ` of holding fractions in counterparties equity, debt and
 external assets respectively. Nominal debt `d` is due at maturity.
 """
-struct XOSModel{T1,T2,T3,U} <: FinancialModel
+struct XOSModel{T1,T2} <: FinancialModel
     N::Int64
-    Mˢ::T1
-    Mᵈ::T2
-    Mᵉ::T3
-    d::U
+    Mˢ::MatrixType{T1,T2}
+    Mᵈ::MatrixType{T1,T2}
+    Mᵉ::MatrixType{T1,T2}
+    d::VectorType{T1,T2}
+    αᵉ::AbstractVector{T1}
 
-    function XOSModel(Mˢ::T1, Mᵈ::T2, Mᵉ::T3, d::AbstractVector) where {T1,T2,T3}
+    function XOSModel(Mˢ::MatrixType{T1,T2}, Mᵈ::MatrixType{T1,T2}, Mᵉ::MatrixType{T1,T2},
+                      d::VectorType{T1,T2}, αᵉ::VectorType{T1,T2}) where {T1<:Real, T2<:Real}
         @assert isleft_substochastic(Mˢ)
         @assert isleft_substochastic(Mᵈ)
         @assert all(d .>= 0)
@@ -32,7 +37,13 @@ struct XOSModel{T1,T2,T3,U} <: FinancialModel
             @assert ld == size(Mᵉ,1)
             @assert ld == size(Mᵉ,2)
         end
-        new{T1,T2,T3,typeof(d)}(ld, Mˢ, Mᵈ, Mᵉ, d)
+        αᵉ_internal = αᵉ isa UniformScaling ? fill(αᵉ.λ,ld) : αᵉ
+        new{T1,T2}(ld, Mˢ, Mᵈ, Mᵉ, d, αᵉ_internal)
+    end
+
+    function XOSModel(Mˢ::MatrixType{T1,T2}, Mᵈ::MatrixType{T1,T2}, Mᵉ::MatrixType{T1,T2},
+                      d::AbstractVector{T1}) where {T1<:Real, T2<:Real}
+        XOSModel(Mˢ, Mᵈ, Mᵉ, d, I)               
     end
 end
 
@@ -57,16 +68,18 @@ end
 
 numfirms(net::XOSModel) = net.N
 
-function valuation!(y, net::XOSModel, x, a)
-    tmp = net.Mᵉ * a .+ net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
-    equityview(net, y) .= max.(zero(eltype(x)), tmp .- net.d)
-    debtview(net, y)   .= min.(net.d, tmp)
+function valuation!(y, net::XOSModel, x, a, dc=nothing)
+    dc = dc === nothing ? defaultcosts(net, x) : dc
+    tmp =  net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
+    equityview(net, y) .= max.(zero(eltype(x)), net.Mᵉ * a .+ tmp .- nominaldebt(net))
+    debtview(net, y)   .= min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp)
 end
 
-function valuation(net::XOSModel, x, a)
-    tmp = net.Mᵉ * a .+ net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
-    vcat(max.(zero(eltype(x)), tmp .- net.d),
-         min.(net.d, tmp))
+function valuation(net::XOSModel, x, a, dc=nothing)
+    dc = dc === nothing ? defaultcosts(net, x) : dc
+    tmp = net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
+    vcat(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net)),
+         min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp))
 end
 
 function fixjacobian(net::XOSModel, a, x = fixvalue(net, a))
@@ -84,12 +97,33 @@ function solvent(net::XOSModel, x)
 end
 
 function init(net::XOSModel, a)
-    vcat(max.(a .- net.d, 0), net.d)
+    vcat(max.(a , 0), net.d)
 end
 
 ##########################
 # Model specific methods #
 ##########################
+
+
+"""
+    TODO: this is a primitive test in order to check for convergence of
+    of the double fixed point iteration to an arbitrary default cost vector.
+    This needs to be extended to allow for default cost functions.
+"""
+function fixvalue(net::XOSModel, a; dc_it = 5 , m = 0, kwargs...)
+    x_i = init(net, a)
+    ones = one(eltype(defaultcosts(net, x_i)))
+    #TODO: in general, this should be a function, giving the next dc_i, converged is it does not change
+    for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it)
+        sol = fixedpoint( x-> valuation(net, x, a, dc_i),
+                         x_i;
+                         m = 0, kwargs...)
+        x_i = sol.zero
+        println("it: ", round.(x_i,digits=3), " for dc = ", round.(dc_i, digits=3))
+    end
+    return x_i
+end
+
 
 """
     equityview(net, x)
@@ -112,3 +146,6 @@ equityview(net::XOSModel, x::AbstractMatrix) = view(x, 1:numfirms(net), :)
 
 debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 debtview(net::XOSModel, x::AbstractMatrix) = begin N = numfirms(net); view(x, (N+1):(2*N), :) end
+
+@inline defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x))
+@inline nominaldebt(net::XOSModel) = net.d

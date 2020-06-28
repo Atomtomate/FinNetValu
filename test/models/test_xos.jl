@@ -101,7 +101,6 @@ end
     a = [2.0, 0.5, 0.6, 0.6]
     N = 4
     @test FinNetValu.numfirms(net) == N
-
     @test FinNetValu.valuation(net, zeros(2*N), a) == [1.2, 0., 0., 0., 0.8, 0.5, 0.6, 0.6]
     
     x = FinNetValu.fixvalue(net, a)

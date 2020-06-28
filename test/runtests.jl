@@ -18,5 +18,6 @@ end
 
 @testset "models" begin
     include("./models/test_rogers.jl")
-    include("./models/test_xos.jl")
+    #include("./models/test_xos.jl")
+    include("./models/test_xos_dc.jl")
 end
