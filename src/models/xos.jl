@@ -11,16 +11,15 @@ Financial network of `N` firms with investment portfolios `Mˢ`, `Mᵈ`
 and `Mᵉ` of holding fractions in counterparties equity, debt and
 external assets respectively. Nominal debt `d` is due at maturity.
 """
-struct XOSModel{T1,T2} <: FinancialModel
+struct XOSModel <: FinancialModel
     N::Int64
-    Mˢ::MatrixType{T1,T2}
-    Mᵈ::MatrixType{T1,T2}
-    Mᵉ::MatrixType{T1,T2}
-    d::VectorType{T1,T2}
-    αᵉ::AbstractVector{T1}
+    Mˢ::MatrixType
+    Mᵈ::MatrixType
+    Mᵉ::MatrixType
+    d::VectorType
+    αᵉ::AbstractVector
 
-    function XOSModel(Mˢ::MatrixType{T1,T2}, Mᵈ::MatrixType{T1,T2}, Mᵉ::MatrixType{T1,T2},
-                      d::VectorType{T1,T2}, αᵉ::VectorType{T1,T2}) where {T1<:Real, T2<:Real}
+    function XOSModel(Mˢ::MatrixType, Mᵈ::MatrixType, Mᵉ::MatrixType, d::VectorType, αᵉ::VectorType)
         @assert isleft_substochastic(Mˢ)
         @assert isleft_substochastic(Mᵈ)
         @assert all(d .>= 0)
@@ -38,7 +37,7 @@ struct XOSModel{T1,T2} <: FinancialModel
             @assert ld == size(Mᵉ,2)
         end
         αᵉ_internal = αᵉ isa UniformScaling ? fill(αᵉ.λ,ld) : αᵉ
-        new{T1,T2}(ld, Mˢ, Mᵈ, Mᵉ, d, αᵉ_internal)
+        new(ld, Mˢ, Mᵈ, Mᵉ, d, αᵉ_internal)
     end
 
     function XOSModel(Mˢ::MatrixType{T1,T2}, Mᵈ::MatrixType{T1,T2}, Mᵉ::MatrixType{T1,T2},
@@ -96,14 +95,24 @@ function solvent(net::XOSModel, x)
     equityview(net, x) .> zero(eltype(x))
 end
 
-function init(net::XOSModel, a)
-    vcat(max.(a , 0), net.d)
-end
+init(net::XOSModel) = repeat(numfirms(net) .* nominaldebt(net), 2)
 
 ##########################
 # Model specific methods #
 ##########################
+function fixedpoint_naive(mapping, init, maxit=10e8)
+    xold = init
+    xnew = mapping(init)
+    it = 1
 
+    while !all(xold .≈ xnew)
+        println(xold)
+        xold = xnew
+        xnew = mapping(xnew)
+        it > maxit && throw("Unable to converge fixed point!")
+    end
+    return xnew
+end
 
 """
     TODO: this is a primitive test in order to check for convergence of
@@ -111,17 +120,16 @@ end
     This needs to be extended to allow for default cost functions.
 """
 function fixvalue(net::XOSModel, a; dc_it = 5 , m = 0, kwargs...)
-    x_i = init(net, a)
+    x_i = init(net)
     ones = one(eltype(defaultcosts(net, x_i)))
     #TODO: in general, this should be a function, giving the next dc_i, converged is it does not change
-    for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it)
-        sol = fixedpoint( x-> valuation(net, x, a, dc_i),
-                         x_i;
-                         m = 0, kwargs...)
-        x_i = sol.zero
-        println("it: ", round.(x_i,digits=3), " for dc = ", round.(dc_i, digits=3))
-    end
-    return x_i
+    x_0 = fixedpoint_naive(x-> valuation(net, x, a, fill(1.0,   length(a))), x_i)
+    x   = fixedpoint_naive(x-> valuation(net, x, a, net.αᵉ), x_0)
+    #= for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it) =#
+    #=     x_i = fixedpoint_naive( x-> valuation(net, x, a, dc_i), x_i) =#
+    #=     println("it: ", round.(x_i,digits=3), " for dc = ", round.(dc_i, digits=3)) =#
+    #= end =#
+    return x
 end
 
 
@@ -142,7 +150,7 @@ matrix.
 function debtview end
 
 equityview(net::XOSModel, x::AbstractVector) = view(x, 1:numfirms(net))
-equityview(net::XOSModel, x::AbstractMatrix) = view(x, 1:numfirms(net), :)
+#equityview(net::XOSModel, x::AbstractMatrix) = view(x, 1:numfirms(net), :)
 
 debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 debtview(net::XOSModel, x::AbstractMatrix) = begin N = numfirms(net); view(x, (N+1):(2*N), :) end

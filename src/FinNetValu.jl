@@ -1,4 +1,5 @@
 module FinNetValu
+__precompile__(false)
 
 include("utils/utils.jl")
 include("utils/nets.jl")
