@@ -1,6 +1,8 @@
 using NLsolve
 using ForwardDiff
 using LinearAlgebra
+using StaticArrays
+using IntervalArithmetic
 
 """
 Base type of all financial network models.

@@ -26,6 +26,12 @@ version = "2.8.7"
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[CRlibm]]
+deps = ["Libdl"]
+git-tree-sha1 = "9d1c22cff9c04207f336b8e64840d0bd40d86e0e"
+uuid = "96374032-68de-5a5b-8d9e-752f78720389"
+version = "0.8.0"
+
 [[CategoricalArrays]]
 deps = ["DataAPI", "Future", "JSON", "Missings", "Printf", "Statistics", "Unicode"]
 git-tree-sha1 = "a6c17353ee38ddab30e73dcfaa1107752de724ec"
@@ -132,6 +138,28 @@ git-tree-sha1 = "395fa1554c69735802bba37d9e7d9586fd44326c"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "0.24.11"
 
+[[ErrorfreeArithmetic]]
+git-tree-sha1 = "a5198ab6c8a724dd3965b31ddd11ccde65300f5b"
+uuid = "90fa49ef-747e-5e6f-a989-263ba693cf1a"
+version = "0.5.0"
+
+[[ExprTools]]
+git-tree-sha1 = "6f0517056812fd6aa3af23d4b70d5325a2ae4e95"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.1"
+
+[[EzXML]]
+deps = ["Printf", "XML2_jll"]
+git-tree-sha1 = "0fa3b52a04a4e210aeb1626def9c90df3ae65268"
+uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+version = "1.1.0"
+
+[[FastRounding]]
+deps = ["ErrorfreeArithmetic", "Test"]
+git-tree-sha1 = "224175e213fd4fe112db3eea05d66b308dc2bf6b"
+uuid = "fa42c844-2597-5d31-933b-ebd51ab2693f"
+version = "0.2.0"
+
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays"]
 git-tree-sha1 = "44f561e293987ffc84272cd3d2b14b0b93123d63"
@@ -170,6 +198,24 @@ version = "0.5.0"
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
+[[IntervalArithmetic]]
+deps = ["CRlibm", "FastRounding", "LinearAlgebra", "Markdown", "Random", "RecipesBase", "RoundingEmulator", "SetRounding", "StaticArrays"]
+git-tree-sha1 = "e12dc113568462326f0c3122faf35f019fff0543"
+uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
+version = "0.17.5"
+
+[[IntervalRootFinding]]
+deps = ["ForwardDiff", "IntervalArithmetic", "LinearAlgebra", "Polynomials", "StaticArrays"]
+git-tree-sha1 = "083359568e6e281c33d80ef4b807a9f610e8e40a"
+uuid = "d2bf35a9-74e0-55ec-b149-d360ff49b807"
+version = "0.5.4"
+
+[[Intervals]]
+deps = ["Dates", "Printf", "RecipesBase", "TimeZones"]
+git-tree-sha1 = "6cb8eeae36aa58b35d5e41d71be5cd67bc6fca87"
+uuid = "d8418881-c3e1-53bb-8760-2df7ec849ed5"
+version = "1.3.4"
+
 [[InvertedIndices]]
 deps = ["Test"]
 git-tree-sha1 = "15732c475062348b0165684ffe28e85ea8396afc"
@@ -193,6 +239,12 @@ uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 
 [[Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[Libiconv_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "c9d4035d7481bcdff2babf5a55525a818ef8ed8f"
+uuid = "94ce4f54-9a6c-5748-9c1c-f9c7231a4531"
+version = "1.16.0+5"
 
 [[LineSearches]]
 deps = ["LinearAlgebra", "NLSolversBase", "NaNMath", "Parameters", "Printf", "Test"]
@@ -232,6 +284,12 @@ version = "0.4.3"
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 
+[[Mocking]]
+deps = ["ExprTools"]
+git-tree-sha1 = "916b850daad0d46b8c71f65f719c49957e9513ed"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.1"
+
 [[NLSolversBase]]
 deps = ["DiffResults", "Distributed", "FiniteDiff", "ForwardDiff"]
 git-tree-sha1 = "7c4e66c47848562003250f28b579c584e55becc0"
@@ -251,9 +309,9 @@ version = "0.3.3"
 
 [[OpenBLAS_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
-git-tree-sha1 = "1887096f6897306a4662f7c5af936da7d5d1a062"
+git-tree-sha1 = "0c922fd9634e358622e333fc58de61f05a048492"
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.9+4"
+version = "0.3.9+5"
 
 [[OpenSpecFun_jll]]
 deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
@@ -288,6 +346,12 @@ version = "1.0.5"
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
+[[Polynomials]]
+deps = ["Intervals", "LinearAlgebra", "RecipesBase"]
+git-tree-sha1 = "192d7561c72579e9dd3a6c845ef911b139c78ba6"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "1.1.2"
+
 [[PooledArrays]]
 deps = ["DataAPI"]
 git-tree-sha1 = "b1333d4eced1826e15adbdf01a4ecaccca9d353c"
@@ -311,6 +375,11 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 [[Random]]
 deps = ["Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+
+[[RecipesBase]]
+git-tree-sha1 = "54f8ceb165a0f6d083f0d12cb4996f5367c6edbc"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "1.0.1"
 
 [[Reexport]]
 deps = ["Pkg"]
@@ -336,11 +405,22 @@ git-tree-sha1 = "d76185aa1f421306dec73c057aa384bad74188f0"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.2.2+1"
 
+[[RoundingEmulator]]
+git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
+uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
+version = "0.2.1"
+
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+
+[[SetRounding]]
+deps = ["Test"]
+git-tree-sha1 = "faca28c7937138d560ede5bfef2076d0cdf3584b"
+uuid = "3cc68bcd-71a2-5612-b932-767ffbe40ab0"
+version = "0.2.0"
 
 [[SharedArrays]]
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
@@ -407,6 +487,12 @@ version = "1.0.4"
 deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[[TimeZones]]
+deps = ["Dates", "EzXML", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "db7bc2051d4c2e5f336409224df81485c00de6cb"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.2.0"
+
 [[UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
@@ -418,3 +504,15 @@ version = "1.0.1"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+
+[[XML2_jll]]
+deps = ["Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "432d91f45e950f2f2bda5c0f4e2b938c14493af9"
+uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
+version = "2.9.10+1"
+
+[[Zlib_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "622d8b6dc0c7e8029f17127703de9819134d1b71"
+uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
+version = "1.2.11+14"

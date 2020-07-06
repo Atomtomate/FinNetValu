@@ -67,14 +67,14 @@ end
 
 numfirms(net::XOSModel) = net.N
 
-function valuation!(y, net::XOSModel, x, a, dc=nothing)
+function valuation!(y, net::XOSModel, x::AbstractVector, a, dc=nothing)
     dc = dc === nothing ? defaultcosts(net, x) : dc
     tmp =  net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
     equityview(net, y) .= max.(zero(eltype(x)), net.Mᵉ * a .+ tmp .- nominaldebt(net))
     debtview(net, y)   .= min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp)
 end
 
-function valuation(net::XOSModel, x, a, dc=nothing)
+function valuation(net::XOSModel, x::AbstractVector, a, dc=nothing)
     dc = dc === nothing ? defaultcosts(net, x) : dc
     tmp = net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
     vcat(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net)),
@@ -91,11 +91,28 @@ function fixjacobian(net::XOSModel, a, x = fixvalue(net, a))
     (I - dVdx) \ Matrix(dVda) ## Note: RHS needs to be dense
 end
 
-function solvent(net::XOSModel, x)
+function solvent(net::XOSModel, x::AbstractVector)
     equityview(net, x) .> zero(eltype(x))
 end
 
 init(net::XOSModel) = repeat(numfirms(net) .* nominaldebt(net), 2)
+
+##########################
+# IntervalBox Functions  #
+##########################
+function valuation(net::XOSModel, x::IntervalBox, a, dc=nothing)
+    N = numfirms(net)
+    dc = dc === nothing ? FinNetValu.defaultcosts(net, x) : dc
+    tmp = net.Mˢ * x[1:N] .+ net.Mᵈ * x[N+1:2*N]
+    return SVector(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net))...,
+                   min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp)...)
+end
+
+function solvent(net::XOSModel, x::IntervalBox)
+    x[1:numfirms(net)] .> zero(eltype(x))
+end
+
+
 
 ##########################
 # Model specific methods #
@@ -150,10 +167,7 @@ matrix.
 function debtview end
 
 equityview(net::XOSModel, x::AbstractVector) = view(x, 1:numfirms(net))
-#equityview(net::XOSModel, x::AbstractMatrix) = view(x, 1:numfirms(net), :)
-
 debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
-debtview(net::XOSModel, x::AbstractMatrix) = begin N = numfirms(net); view(x, (N+1):(2*N), :) end
 
-@inline defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x))
-@inline nominaldebt(net::XOSModel) = net.d
+defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x))
+nominaldebt(net::XOSModel) = net.d
