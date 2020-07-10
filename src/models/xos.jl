@@ -142,7 +142,7 @@ function fixvalue(net::XOSModel, a; dc_it = 25 , m = 0, kwargs...)
     ones = one(eltype(defaultcosts(net, x_i)))
     #TODO: in general, this should be a function, giving the next dc_i, converged is it does not change
     x_0 = fixedpoint_naive(x-> valuation(net, x, a, fill(1.0,   length(a))), x_i)
-    debug && println("alpha cycle")
+    
     x   = fixedpoint_naive(x-> valuation(net, x, a, net.αᵉ), x_0)
     #= for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it) =#
     #=     x_i = fixedpoint_naive( x-> valuation(net, x, a, dc_i), x_i) =#
