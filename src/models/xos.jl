@@ -5,11 +5,12 @@ const MatrixType{T} = Union{AbstractMatrix{T1}, UniformScaling{T2}} where {T1<:R
 const VectorType{T} = Union{AbstractVector{T1}, UniformScaling{T2}} where {T1<:Real, T2<:Real}
 
 """
-    XOSModel(N, Mˢ, Mᵈ, Mᵉ, d)
+    XOSModel(Mˢ, Mᵈ, Mᵉ, d, αᵉ)
 
 Financial network of `N` firms with investment portfolios `Mˢ`, `Mᵈ`
 and `Mᵉ` of holding fractions in counterparties equity, debt and
 external assets respectively. Nominal debt `d` is due at maturity.
+The default costs are given by `αᵉ`.
 """
 struct XOSModel <: FinancialModel
     N::Int64
@@ -104,8 +105,8 @@ function valuation(net::XOSModel, x::IntervalBox, a, dc=nothing)
     N = numfirms(net)
     dc = dc === nothing ? FinNetValu.defaultcosts(net, x) : dc
     tmp = net.Mˢ * x[1:N] .+ net.Mᵈ * x[N+1:2*N]
-    return SVector(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net))...,
-                   min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp)...)
+    return SVector(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- net.d)...,
+                   min.(net.d, dc .* (net.Mᵉ * a) .+ tmp)...)
 end
 
 function solvent(net::XOSModel, x::IntervalBox)
@@ -117,13 +118,13 @@ end
 ##########################
 # Model specific methods #
 ##########################
-function fixedpoint_naive(mapping, init, maxit=10e8)
+function fixedpoint_naive(mapping, init, maxit=10e8, debug=false)
     xold = init
     xnew = mapping(init)
     it = 1
 
     while !all(xold .≈ xnew)
-        println(xold)
+        debug && println(xold)
         xold = xnew
         xnew = mapping(xnew)
         it > maxit && throw("Unable to converge fixed point!")
@@ -136,11 +137,12 @@ end
     of the double fixed point iteration to an arbitrary default cost vector.
     This needs to be extended to allow for default cost functions.
 """
-function fixvalue(net::XOSModel, a; dc_it = 5 , m = 0, kwargs...)
+function fixvalue(net::XOSModel, a; dc_it = 25 , m = 0, kwargs...)
     x_i = init(net)
     ones = one(eltype(defaultcosts(net, x_i)))
     #TODO: in general, this should be a function, giving the next dc_i, converged is it does not change
     x_0 = fixedpoint_naive(x-> valuation(net, x, a, fill(1.0,   length(a))), x_i)
+    debug && println("alpha cycle")
     x   = fixedpoint_naive(x-> valuation(net, x, a, net.αᵉ), x_0)
     #= for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it) =#
     #=     x_i = fixedpoint_naive( x-> valuation(net, x, a, dc_i), x_i) =#
@@ -169,5 +171,5 @@ function debtview end
 equityview(net::XOSModel, x::AbstractVector) = view(x, 1:numfirms(net))
 debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 
-defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x))
+defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x)) .+ 1.0 .* solvent(net, x)
 nominaldebt(net::XOSModel) = net.d
