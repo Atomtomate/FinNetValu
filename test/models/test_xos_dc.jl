@@ -2,6 +2,7 @@ using ForwardDiff
 using LinearAlgebra
 using SparseArrays
 
+
 @testset "xos default fixpoint" begin
     Mˢ = [0.0 1/3; 1/4 0.0]
     Mᵈ = [0.0 1/2; 1/5 0.0]
@@ -28,12 +29,11 @@ using SparseArrays
     @test all(x4 .≈ [16/11, 15/11, 0, 0]) # (1 - Mˢ)^(-1) * (1,1)
     net5 = FinNetValu.XOSModel(Mˢ, Mᵈ, Mᵉ, d1, α1)
     x5 = FinNetValu.fixvalue(net5, a)
-    @test all(x5 .≈ (1/10) .* [0, 0, 5/3, 4/3])     # (1 - Mᵈ)^(-1) * (1/10,1/10)
+    @test all(x5 .≈ 1/10 .* [0, 0, 5/3, 4/3])     # (1 - Mᵈ)^(-1) * (1/10,1/10)
     net6 = FinNetValu.XOSModel(Mˢ, Mᵈ, Mᵉ, d2, α1)
     x6 = FinNetValu.fixvalue(net6, a)
     @test all(x6 .≈ [6/5, 0, 0, 2/5])     # (1 - Mᵈ)^(-1) * (1,1)
 
-    println(x6)
 end
 
 @testset "xos default cost general" begin

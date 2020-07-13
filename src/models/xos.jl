@@ -69,17 +69,15 @@ end
 numfirms(net::XOSModel) = net.N
 
 function valuation!(y, net::XOSModel, x::AbstractVector, a, dc=nothing)
-    dc = dc === nothing ? defaultcosts(net, x) : dc
     tmp =  net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
     equityview(net, y) .= max.(zero(eltype(x)), net.Mᵉ * a .+ tmp .- nominaldebt(net))
-    debtview(net, y)   .= min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp)
+    debtview(net, y)   .= min.(nominaldebt(net), defaultcosts(net, x, dc) .* (net.Mᵉ * a) .+ tmp)
 end
 
 function valuation(net::XOSModel, x::AbstractVector, a, dc=nothing)
-    dc = dc === nothing ? defaultcosts(net, x) : dc
     tmp = net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
     vcat(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net)),
-         min.(nominaldebt(net), dc .* (net.Mᵉ * a) .+ tmp))
+         min.(nominaldebt(net), defaultcosts(net, x, dc) .* (net.Mᵉ * a) .+ tmp))
 end
 
 function fixjacobian(net::XOSModel, a, x = fixvalue(net, a))
@@ -103,10 +101,9 @@ init(net::XOSModel) = repeat(numfirms(net) .* nominaldebt(net), 2)
 ##########################
 function valuation(net::XOSModel, x::IntervalBox, a, dc=nothing)
     N = numfirms(net)
-    dc = dc === nothing ? FinNetValu.defaultcosts(net, x) : dc
     tmp = net.Mˢ * x[1:N] .+ net.Mᵈ * x[N+1:2*N]
     return SVector(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- net.d)...,
-                   min.(net.d, dc .* (net.Mᵉ * a) .+ tmp)...)
+                   min.(net.d, defaultcosts(net, x, dc).* (net.Mᵉ * a) .+ tmp)...)
 end
 
 function solvent(net::XOSModel, x::IntervalBox)
@@ -118,7 +115,7 @@ end
 ##########################
 # Model specific methods #
 ##########################
-function fixedpoint_naive(mapping, init, maxit=10e8, debug=false)
+function fixedpoint_naive(mapping, init; maxit=10e8, debug=false)
     xold = init
     xnew = mapping(init)
     it = 1
@@ -137,13 +134,12 @@ end
     of the double fixed point iteration to an arbitrary default cost vector.
     This needs to be extended to allow for default cost functions.
 """
-function fixvalue(net::XOSModel, a; dc_it = 25 , m = 0, kwargs...)
+function fixvalue(net::XOSModel, a; dc_it = 5 , m = 0, kwargs...)
     x_i = init(net)
     ones = one(eltype(defaultcosts(net, x_i)))
     #TODO: in general, this should be a function, giving the next dc_i, converged is it does not change
-    x_0 = fixedpoint_naive(x-> valuation(net, x, a, fill(1.0,   length(a))), x_i)
-    
-    x   = fixedpoint_naive(x-> valuation(net, x, a, net.αᵉ), x_0)
+    x_0 = fixedpoint_naive(x-> valuation(net, x, a, 1.0), x_i, debug=false)
+    x   = fixedpoint_naive(x-> valuation(net, x, a, net.αᵉ), x_0, debug=false)
     #= for dc_i in (ones .- i*(ones .- net.αᵉ)/dc_it for i in 0:dc_it) =#
     #=     x_i = fixedpoint_naive( x-> valuation(net, x, a, dc_i), x_i) =#
     #=     println("it: ", round.(x_i,digits=3), " for dc = ", round.(dc_i, digits=3)) =#
@@ -171,5 +167,9 @@ function debtview end
 equityview(net::XOSModel, x::AbstractVector) = view(x, 1:numfirms(net))
 debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 
-defaultcosts(net::XOSModel, x, dc=net.αᵉ) = dc .* ( .! solvent(net, x)) .+ 1.0 .* solvent(net, x)
+function defaultcosts(net::XOSModel, x, dc=nothing)
+    ζ = solvent(net, x)
+    dc = dc === nothing ? net.αᵉ : dc 
+    return dc .* ( .!ζ).+ 1.0 .* ζ
+end
 nominaldebt(net::XOSModel) = net.d
