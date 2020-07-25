@@ -68,14 +68,8 @@ end
 
 numfirms(net::XOSModel) = net.N
 
-function valuation!(y, net::XOSModel, x::AbstractVector, a, dc=nothing)
-    tmp =  net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
-    equityview(net, y) .= max.(zero(eltype(x)), net.Mᵉ * a .+ tmp .- nominaldebt(net))
-    debtview(net, y)   .= min.(nominaldebt(net), defaultcosts(net, x, dc) .* (net.Mᵉ * a) .+ tmp)
-end
-
-function valuation(net::XOSModel, x::AbstractVector, a, dc=nothing)
-    tmp = net.Mˢ * equityview(net, x) .+ net.Mᵈ * debtview(net, x)
+function valuation(net::XOSModel, x::StateVector, a, dc=nothing)
+    tmp = net.Mˢ * equity(x) .+ net.Mᵈ * debt(x)
     vcat(max.(zero(eltype(x)), (net.Mᵉ * a) .+ tmp .- nominaldebt(net)),
          min.(nominaldebt(net), defaultcosts(net, x, dc) .* (net.Mᵉ * a) .+ tmp))
 end
@@ -90,8 +84,8 @@ function fixjacobian(net::XOSModel, a, x = fixvalue(net, a))
     (I - dVdx) \ Matrix(dVda) ## Note: RHS needs to be dense
 end
 
-function solvent(net::XOSModel, x::AbstractVector)
-    equityview(net, x) .> zero(eltype(x))
+function solvent(net::XOSModel, x::StateVector)
+    equity(x) .> zero(eltype(x))
 end
 
 init(net::XOSModel) = repeat(numfirms(net) .* nominaldebt(net), 2)
@@ -115,19 +109,6 @@ end
 ##########################
 # Model specific methods #
 ##########################
-function fixedpoint_naive(mapping, init; maxit=10e8, debug=false)
-    xold = init
-    xnew = mapping(init)
-    it = 1
-
-    while !all(xold .≈ xnew)
-        debug && println(xold)
-        xold = xnew
-        xnew = mapping(xnew)
-        it > maxit && throw("Unable to converge fixed point!")
-    end
-    return xnew
-end
 
 """
     TODO: this is a primitive test in order to check for convergence of
@@ -147,25 +128,11 @@ function fixvalue(net::XOSModel, a; dc_it = 5 , m = 0, kwargs...)
     return x
 end
 
+equity(x::StateVector) = begin N = floor(Int64,length(x)/2); x[1:N] end
+debt(x::StateVector) = begin N = floor(Int64,length(x)/2); x[N+1:end] end
+equityview(net::XOSModel, x::Array) = view(x, 1:numfirms(net))
+debtview(net::XOSModel, x::Array) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 
-"""
-    equityview(net, x)
-
-View the equity part of `x` which can be a state vector of Jacobian
-matrix.
-"""
-function equityview end
-
-"""
-    debtview(net, x)
-
-View the debt part of `x` which can be a state vector of Jacobian
-matrix.
-"""
-function debtview end
-
-equityview(net::XOSModel, x::AbstractVector) = view(x, 1:numfirms(net))
-debtview(net::XOSModel, x::AbstractVector) = begin N = numfirms(net); view(x, (N+1):(2*N)) end
 
 function defaultcosts(net::XOSModel, x, dc=nothing)
     ζ = solvent(net, x)
@@ -173,3 +140,8 @@ function defaultcosts(net::XOSModel, x, dc=nothing)
     return dc .* ( .!ζ).+ 1.0 .* ζ
 end
 nominaldebt(net::XOSModel) = net.d
+
+
+############################
+# Default Boundary Related #
+############################

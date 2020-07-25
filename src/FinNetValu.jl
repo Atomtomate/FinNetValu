@@ -3,6 +3,7 @@ __precompile__(false)
 
 include("utils/utils.jl")
 include("utils/nets.jl")
+include("utils/fixedPoint.jl")
 include("pricing/bs.jl")
 include("pricing/mc.jl")
 include("models/model.jl")

@@ -53,17 +53,13 @@ function valuefunc(net::FinancialModel, a)
 end
 
 """
-    fixvalue(net, a; kwargs...)
+    fixvalue(net, a, fixedPointSolver)
 
 Solve for self-consistent fixed point value of model `net` for
-external asset values `a`. `kwargs` are passed on to solver.
+external asset values `a`. `fixedPointSolver` specifies a function
+returning a `FixedPoint` struct.
 """
-function fixvalue(net::FinancialModel, a; m = 0, kwargs...)
-    sol = NLsolve.fixedpoint(valuefunc(net, a),
-                     init(net, a);
-                     m = m, kwargs...)
-    sol.zero
-end
+fixvalue(net::FinancialModel, a, fixedPointSolver) = fixedPointSolver(valuefunc(net, a), init(net, a))
 
 """
     fixjacobian(net, a [, x])

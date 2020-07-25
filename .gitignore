@@ -1,3 +1,4 @@
+*.out
 *.cov
 docs/build
 notebooks/.ipynb_checkpoints
