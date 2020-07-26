@@ -11,6 +11,8 @@ include("models/neva.jl")
 include("models/xos.jl")
 include("models/rogers.jl")
 
+include("models/default_region_tools.jl")
+
 # Generic financial model interface
 export fixvalue, fixjacobian, valuation!, valuation, solvent, numfirms
 # Model constructors

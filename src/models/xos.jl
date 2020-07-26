@@ -145,3 +145,9 @@ nominaldebt(net::XOSModel) = net.d
 ############################
 # Default Boundary Related #
 ############################
+function loss_db(net, aₗ, aᵣ) 
+    xₗ = FinNetValu.fixvalue(net, aₗ)
+    xᵣ = FinNetValu.fixvalue(net, aᵣ)
+    [sum(abs.(FinNetValu.equity(xₗ) .- FinNetValu.equity(xᵣ))), 
+     sum(abs.(FinNetValu.debt(xₗ) .- FinNetValu.debt(xᵣ)))]
+end
