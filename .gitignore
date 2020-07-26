@@ -1,5 +1,7 @@
 *.out
 *.cov
+*.pdf
+*.png
 docs/build
 notebooks/.ipynb_checkpoints
 *nohub*
