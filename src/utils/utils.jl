@@ -37,7 +37,7 @@ of `l` and `r` may be reversed.
 The maximum number of bisections can be specified with `maxiter`.
 The minimum size of the interval [`l'`,`r'`] can be specified with `isize`.
 """
-function bisect(f, l, r, args...; maxiter = 10^12, isize = 10^-12, allow_swap = false)
+function bisect(f, l, r, args...; maxiter = 10^12, isize = 10^(-12), allow_swap = false)
     if allow_swap
         l, r = (l > r) ? (r, l) : (l, r)
     end

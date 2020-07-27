@@ -17,8 +17,8 @@
 end
 
 @testset "bisection" begin
-    @test bisect(x -> abs(x) < 10^-5 ? 0 : sign(x), -2, 2) ≈ 0
-    @test bisect(x -> abs(x) < 10^-5 ? 0 : sign(x), -3, 2) ≈ 0
-    @test bisect(x -> abs(x) < 10^-5 ? 0 : sign(x), -2, 3) ≈ 0
-    @test bisect((x,y) -> abs(x+y) < 10^-12 ? 0 : sign(x+y), -6, 6, 2) ≈ -2
+    @test begin int = FinNetValu.bisect(x -> abs(x) < 10^-12 ? 0 : sign(x), -2, 2); abs(int[2] + int[1])/2 < 10^-12 end
+    @test begin int = FinNetValu.bisect(x -> abs(x) < 10^-12 ? 0 : sign(x), -3, 2); abs(int[2] + int[1])/2 < 10^-12 end
+    @test begin int = FinNetValu.bisect(x -> abs(x) < 10^-12 ? 0 : sign(x), -2, 3); abs(int[2] + int[1])/2 < 10^-12 end
+    @test all(FinNetValu.bisect((x,y) -> abs(x+y) < 10^-12 ? 0 : sign(x+y), -6, 6, 2) .≈ [-2,-2])
 end

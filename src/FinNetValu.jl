@@ -4,6 +4,7 @@ __precompile__(false)
 include("utils/utils.jl")
 include("utils/nets.jl")
 include("utils/fixedPoint.jl")
+include("utils/default_region_tools.jl")
 include("pricing/bs.jl")
 include("pricing/mc.jl")
 include("models/model.jl")
@@ -11,7 +12,6 @@ include("models/neva.jl")
 include("models/xos.jl")
 include("models/rogers.jl")
 
-include("models/default_region_tools.jl")
 
 # Generic financial model interface
 export fixvalue, fixjacobian, valuation!, valuation, solvent, numfirms
